@@ -39,3 +39,5 @@ app-example
 
 *.swp
 *.swo
+# Local configuration ghost
+~/
