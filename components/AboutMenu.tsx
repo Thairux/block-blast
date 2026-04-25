@@ -9,7 +9,7 @@ export default function AboutMenu() {
     const [ _, __, popAppState ] = useSetAppState();
 
     return (
-        <SimplePopupView style={{ justifyContent: 'flex-start', paddingVertical: 20 }}>
+        <SimplePopupView style={[{ justifyContent: 'flex-start', paddingVertical: 20 }]}>
             <StylizedButton text="Back" onClick={popAppState} backgroundColor={cssColors.spaceGray} />
             
             <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>

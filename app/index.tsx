@@ -15,6 +15,7 @@ import OptionsMenu from "@/components/OptionsMenu";
 import { MenuStateType, useAppState } from "@/hooks/useAppState";
 import MainMenu from "@/components/MainMenu";
 import HighScores from "@/components/HighScoresMenu";
+import AboutMenu from "@/components/AboutMenu";
 import { PieceParticle } from "@/components/PieceParticle";
 
 configureReanimatedLogger({
@@ -47,6 +48,7 @@ export default function App() {
 			{ gameMode && <Game gameMode={gameMode}></Game> }
 			{ appState.containsState(MenuStateType.OPTIONS) && <OptionsMenu></OptionsMenu> }
 			{ appState.containsState(MenuStateType.HIGH_SCORES) && <HighScores></HighScores>}
+			{ appState.containsState(MenuStateType.ABOUT) && <AboutMenu></AboutMenu>}
 		</Animated.View>
 	);
 }

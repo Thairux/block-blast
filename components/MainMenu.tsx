@@ -46,10 +46,6 @@ function AetherLogo({blockSize, style}: {blockSize: number, style: ViewStyle}) {
 export default function MainMenu() {
 	const [ appState, appendAppState ] = useSetAppState();
 	
-	if (appState.current === MenuStateType.ABOUT) {
-		return <AboutMenu />;
-	}
-
 	return <View style={styles.container}>
 
 		<AetherLogo style={{position: 'absolute', bottom: 20, left: 20}} blockSize={6}></AetherLogo>
