@@ -17,11 +17,13 @@ jobs:
     steps:
       - name: 🏗 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       - name: 📦 Install dependencies
@@ -36,14 +38,6 @@ jobs:
       - name: 🚀 Build Web
         run: npx expo export -p web
 
-      - name: 🔧 Fix Base Path for GitHub Pages
-        run: |
-          # The app uses /aether as baseUrl in app.json
-          # No further action needed if baseUrl is correctly set
-          mv dist dist-temp
-          mkdir dist
-          mv dist-temp dist/block-blast
-
       - name: 📤 Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -54,6 +48,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag v${{ steps.get_version.outputs.version }} || echo "Tag already exists"
           git push origin v${{ steps.get_version.outputs.version }} || echo "Already pushed"
 

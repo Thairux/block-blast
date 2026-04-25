@@ -45,7 +45,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "baseUrl": "/aether"
+      "baseUrl": "/block-blast"
     }
   }
 }

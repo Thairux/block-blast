@@ -304,11 +304,23 @@ function GameOverOverlay({ gameOver, onRestart, gameMode, blocksPlaced, score }:
     if (!visible) return null;
 
     const calculateIQ = () => {
-        if (finalScore < 100) return "Bird";
-        if (finalScore < 500) return "Primate";
-        if (finalScore < 2000) return "Human";
-        if (finalScore < 5000) return "Aether Entity";
-        return "Celestial Entity";
+        const isInfinite = gameMode === GameModeType.Infinite;
+        
+        if (isInfinite) {
+            // In Infinite mode, failing FAST means you beat the Indestructible AI
+            if (finalScore < 100) return "Celestial Entity";
+            if (finalScore < 500) return "Aether Entity";
+            if (finalScore < 1000) return "Human (Strategist)";
+            if (finalScore < 3000) return "Primate";
+            return "Bird";
+        } else {
+            // Traditional logic for other modes
+            if (finalScore < 100) return "Bird";
+            if (finalScore < 500) return "Primate";
+            if (finalScore < 2000) return "Human";
+            if (finalScore < 5000) return "Aether Entity";
+            return "Celestial Entity";
+        }
     };
 
     const isInfinite = gameMode === GameModeType.Infinite;
