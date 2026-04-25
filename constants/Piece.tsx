@@ -1,11 +1,7 @@
 import { Color, colorToHex, lighten, darken } from "./Color";
-import { BoardBlockType } from "./Board";
+import { BoardBlockType, PieceData } from "./Types";
 
-export interface PieceData {
-	matrix: number[][];
-	distributionPoints: number;
-	color: Color;
-}
+export { PieceData };
 
 interface PieceDataSaved {
 	matrix: number[][];
@@ -219,6 +215,13 @@ export const piecesData: PieceDataSaved[] = [
 		],
 		distributionPoints: 2,
 	},
+	// 1x1 (Survival Block)
+	{
+		matrix: [
+			[1],
+		],
+		distributionPoints: 0.5,
+	}
 ];
 
 export const pieceColors = [

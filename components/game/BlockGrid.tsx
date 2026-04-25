@@ -29,8 +29,6 @@ interface BlockGridProps {
 }
 
 function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: number, board: SharedValue<Board>, possibleBoardDropSpots: SharedValue<PossibleBoardSpots> }) {
-    // We must use a local shared value for the "last valid color" during the fall animation
-    // because the board value will be EMPTY while the animation is still playing.
     const lastColor = useSharedValue(board.value[y][x].color);
     const lastHoverColor = useSharedValue(board.value[y][x].hoveredBreakColor);
     
@@ -39,7 +37,6 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
     const placedBlockDirectionY = useSharedValue(0);
     const placedBlockRotation = useSharedValue(0);
 
-    // This state is only for gems/react-native text rendering which is slow anyway
     const [hasGem, setHasGem] = useState(board.value[y][x].hasGem);
 
     useAnimatedReaction(() => {
@@ -54,7 +51,6 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
             lastHoverColor.value = cur.hoveredBreakColor;
         }
         
-        // Handle clear animation
         if (cur.blockType == BoardBlockType.EMPTY && prev && (prev.blockType == BoardBlockType.FILLED || prev.blockType == BoardBlockType.HOVERED_BREAK_EMPTY || prev.blockType == BoardBlockType.HOVERED_BREAK_FILLED)) {
             const angle = Math.random() * Math.PI * 2;
             const distance = 250;
@@ -108,7 +104,6 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
         if (block.blockType === BoardBlockType.HOVERED_BREAK_FILLED) {
             color = block.hoveredBreakColor;
         } else if (placedBlockFall.value > 0) {
-            // Use cached color for falling blocks
             color = lastColor.value;
         }
 
@@ -123,7 +118,7 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
             <AnimatedBlockWrapper visualProps={visualProps} animatedStyle={animatedStyle} />
             
             {hasGem && (
-                <View style={StyleSheet.absoluteFill}>
+                <View style={[StyleSheet.absoluteFill, styles.gemContainer, { zIndex: 20 }]}>
                      <AnimatedGemWrapper board={board} x={x} y={y} />
                 </View>
             )}
@@ -138,7 +133,6 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
     );
 }
 
-// Separate component for the animated block to ensure pure Reanimated rendering
 function AnimatedBlockWrapper({ visualProps, animatedStyle }: { visualProps: SharedValue<any>, animatedStyle: any }) {
     const internalStyle = useAnimatedStyle(() => {
         if (!visualProps.value.isFilled) {
@@ -154,7 +148,6 @@ function AnimatedBlockWrapper({ visualProps, animatedStyle }: { visualProps: Sha
     );
 }
 
-// Truly reactive BlockVisual that doesn't rely on JS state
 function BlockVisualReanimated({ visualProps }: { visualProps: SharedValue<any> }) {
     const [color, setColor] = useState(visualProps.value.color);
 
@@ -167,11 +160,10 @@ function BlockVisualReanimated({ visualProps }: { visualProps: SharedValue<any> 
 
 function AnimatedGemWrapper({ board, x, y }: { board: SharedValue<Board>, x: number, y: number }) {
     const gemStyle = useAnimatedStyle(() => {
-        const block = board.value[y][x];
-        const isFilled = block.blockType === BoardBlockType.FILLED;
         return {
-            opacity: isFilled ? 0 : 1,
-            display: isFilled ? 'none' : 'flex'
+            opacity: 1,
+            display: 'flex',
+            transform: [{ scale: 1.1 }]
         };
     });
 

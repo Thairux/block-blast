@@ -3,7 +3,8 @@ import { SetStateAction, atom, useAtom, useAtomValue, useSetAtom } from "jotai";
 export enum MenuStateType {
 	MENU = 'menu',
 	OPTIONS = 'options', 
-	HIGH_SCORES = 'highscores'
+	HIGH_SCORES = 'highscores',
+	ABOUT = 'about'
 }
 
 export enum GameModeType {

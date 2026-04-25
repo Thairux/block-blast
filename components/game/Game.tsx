@@ -1,12 +1,13 @@
-import { PieceData, getBlockCount } from '@/constants/Piece';
+import { getBlockCount } from '@/constants/Piece';
 import { DndProvider, DndProviderProps, Rectangle } from '@mgcrea/react-native-dnd';
 import React, { useEffect, useState } from 'react';
-import { Platform, SafeAreaView, StyleSheet, View, Text } from 'react-native';
+import { Platform, SafeAreaView, StyleSheet, View, Text, Modal, Pressable } from 'react-native';
 import { GestureHandlerRootView, State } from 'react-native-gesture-handler';
 import Animated, { ReduceMotion, runOnJS, useSharedValue, FadeInUp, FadeOutUp, useAnimatedReaction } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
-import { BoardBlockType, GRID_BLOCK_SIZE, JS_emptyPossibleBoardSpots, PossibleBoardSpots, XYPoint, breakLines, clearHoverBlocks, createPossibleBoardSpots, emptyPossibleBoardSpots, newEmptyBoard, placePieceOntoBoard, updateHoveredBreaks, canPlaceAnyPiece, deepCopyBoard } from '@/constants/Board';
+import { GRID_BLOCK_SIZE, JS_emptyPossibleBoardSpots, PossibleBoardSpots, breakLines, clearHoverBlocks, createPossibleBoardSpots, emptyPossibleBoardSpots, newEmptyBoard, placePieceOntoBoard, updateHoveredBreaks, canPlaceAnyPiece, deepCopyBoard } from '@/constants/Board';
+import { BoardBlockType, XYPoint, PieceData } from '@/constants/Types';
 import { StatsGameHud, StickyGameHud } from '@/components/game/GameHud';
 import BlockGrid from '@/components/game/BlockGrid';
 import { createHandWorklet, createRandomHand } from '@/constants/Hand';
@@ -62,6 +63,7 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 	const combo = useSharedValue(0);
 	const lastBrokenLine = useSharedValue(0);
 	const gameOver = useSharedValue(false);
+    const totalBlocksPlaced = useSharedValue(0);
 	
 	const currentLevel = useSharedValue(1);
 	const gemsCollected = useSharedValue(0);
@@ -69,6 +71,7 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 
 	const scoreStorageId = useSharedValue<HighScoreId | undefined>(undefined);
     const [encouragement, setEncouragement] = useState<string | null>(null);
+    const [showOnboarding, setShowOnboarding] = useState(true);
 
     const playSound = async (type: 'place' | 'clear' | 'gameover') => {
         try {
@@ -145,7 +148,6 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 						nextBoard[ry][rx].hasGem = true;
 						nextBoard[ry][rx].blockType = BoardBlockType.FILLED;
 					}
-                    // Resetting board for next level
 					board.value = nextBoard;
                     hand.value = createHandWorklet(handSize, gameMode, nextBoard);
                     return;
@@ -154,6 +156,8 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 
 			const pieceBlockCount = getBlockCount(piece);
 			score.value += pieceBlockCount;
+            totalBlocksPlaced.value += 1;
+
 			if (linesBroken > 0) {
                 runOnJS(playSound)('clear');
                 runOnJS(showEncouragement)(linesBroken);
@@ -181,7 +185,6 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 			}
 			board.value = newBoard;
 
-            // Check Game Over
             if (!canPlaceAnyPiece(newBoard, hand.value)) {
                 gameOver.value = true;
                 runOnJS(playSound)('gameover');
@@ -239,26 +242,95 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
                         </Animated.View>
                     )}
 
-                    <GameOverOverlay gameOver={gameOver} onRestart={() => setAppState(MenuStateType.MENU)} />
+                    <Onboarding mode={gameMode} visible={showOnboarding} onDismiss={() => setShowOnboarding(false)} />
+                    <GameOverOverlay gameOver={gameOver} onRestart={() => setAppState(MenuStateType.MENU)} gameMode={gameMode} blocksPlaced={totalBlocksPlaced} score={score} />
 				</View>
 			</GestureHandlerRootView>
 		</SafeAreaView>
 	);
 })
 
-function GameOverOverlay({ gameOver, onRestart }: { gameOver: SharedValue<boolean>, onRestart: () => void }) {
+function Onboarding({ mode, visible, onDismiss }: { mode: GameModeType, visible: boolean, onDismiss: () => void }) {
+    const getContent = () => {
+        switch(mode) {
+            case GameModeType.Infinite:
+                return {
+                    title: "Infinite Rules",
+                    text: "Every hand is guaranteed playable by our AI. Your only challenge is to try and fail. Can you even reach a game over?"
+                };
+            case GameModeType.Classic:
+                return {
+                    title: "Classic Rules",
+                    text: "Traditional block blast. Random pieces, clear lines to survive as long as possible. Strategic planning is key."
+                };
+            case GameModeType.Puzzle:
+                return {
+                    title: "Puzzle Rules",
+                    text: "Collect gems hidden within blocks to level up. Clear lines containing gems to advance."
+                };
+        }
+    };
+
+    const content = getContent();
+
+    return (
+        <Modal transparent visible={visible} animationType="fade">
+            <View style={styles.modalBg}>
+                <View style={styles.onboardingCard}>
+                    <Text style={styles.onboardingTitle}>{content.title}</Text>
+                    <Text style={styles.onboardingText}>{content.text}</Text>
+                    <Pressable style={styles.dismissButton} onPress={onDismiss}>
+                        <Text style={styles.dismissText}>I'M READY</Text>
+                    </Pressable>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+function GameOverOverlay({ gameOver, onRestart, gameMode, blocksPlaced, score }: { gameOver: SharedValue<boolean>, onRestart: () => void, gameMode: GameModeType, blocksPlaced: SharedValue<number>, score: SharedValue<number> }) {
     const [visible, setVisible] = useState(false);
+    const [blocks, setBlocks] = useState(0);
+    const [finalScore, setFinalScore] = useState(0);
     
-    useAnimatedReaction(() => gameOver.value, (cur) => {
-        if (cur) runOnJS(setVisible)(true);
+    useAnimatedReaction(() => [gameOver.value, blocksPlaced.value, score.value], ([isOver, b, s]) => {
+        if (isOver) {
+            runOnJS(setBlocks)(b as number);
+            runOnJS(setFinalScore)(s as number);
+            runOnJS(setVisible)(true);
+        }
     });
 
     if (!visible) return null;
 
+    const calculateIQ = () => {
+        if (finalScore < 100) return "Bird";
+        if (finalScore < 500) return "Primate";
+        if (finalScore < 2000) return "Human";
+        if (finalScore < 5000) return "Aether Entity";
+        return "Celestial AI";
+    };
+
+    const isInfinite = gameMode === GameModeType.Infinite;
+
     return (
         <View style={styles.overlay}>
-            <Text style={styles.gameOverText}>GAME OVER</Text>
-            <Text style={styles.restartButton} onPress={onRestart}>MAIN MENU</Text>
+            <Text style={styles.gameOverText}>
+                {isInfinite ? "CONGRATULATIONS!" : "GAME OVER"}
+            </Text>
+            {isInfinite && (
+                <Text style={styles.loopBeatenText}>YOU BEAT THE INFINITE LOOP</Text>
+            )}
+            
+            <View style={styles.statsContainer}>
+                <Text style={styles.statText}>Blocks Placed: {blocks}</Text>
+                <Text style={styles.statText}>Score: {finalScore}</Text>
+                <Text style={styles.statText}>IQ Rating: <Text style={{color: 'cyan'}}>{calculateIQ()}</Text></Text>
+            </View>
+
+            <Pressable style={styles.restartButtonPressable} onPress={onRestart}>
+                <Text style={styles.restartButtonText}>MAIN MENU</Text>
+            </Pressable>
         </View>
     );
 }
@@ -277,13 +349,43 @@ const styles = StyleSheet.create({
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 3000
+        backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center', zIndex: 3000
     },
     gameOverText: {
-        fontFamily: 'Silkscreen', fontSize: 60, color: 'red', marginBottom: 20
+        fontFamily: 'Silkscreen', fontSize: 48, color: 'red', marginBottom: 10, textAlign: 'center'
     },
-    restartButton: {
-        fontFamily: 'Silkscreen', fontSize: 30, color: 'white', backgroundColor: 'blue', padding: 15, borderRadius: 10
+    loopBeatenText: {
+        fontFamily: 'Silkscreen', fontSize: 18, color: '#00ff00', marginBottom: 30, textAlign: 'center', paddingHorizontal: 20
+    },
+    statsContainer: {
+        marginBottom: 40, alignItems: 'center'
+    },
+    statText: {
+        fontFamily: 'Silkscreen', fontSize: 20, color: 'white', marginBottom: 10
+    },
+    restartButtonPressable: {
+        backgroundColor: 'blue', padding: 15, borderRadius: 10, borderWidth: 2, borderColor: 'white'
+    },
+    restartButtonText: {
+        fontFamily: 'Silkscreen', fontSize: 24, color: 'white'
+    },
+    modalBg: {
+        flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center'
+    },
+    onboardingCard: {
+        width: '80%', backgroundColor: '#222', padding: 30, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center'
+    },
+    onboardingTitle: {
+        fontFamily: 'Silkscreen', fontSize: 24, color: 'white', marginBottom: 20
+    },
+    onboardingText: {
+        fontFamily: 'Silkscreen', fontSize: 14, color: '#ccc', textAlign: 'center', marginBottom: 30, lineHeight: 22
+    },
+    dismissButton: {
+        backgroundColor: '#00ff00', paddingVertical: 12, paddingHorizontal: 40, borderRadius: 10
+    },
+    dismissText: {
+        fontFamily: 'Silkscreen', fontSize: 18, color: 'black'
     }
 })
 

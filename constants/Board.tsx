@@ -1,32 +1,13 @@
 import { Color } from "./Color";
-import { getRandomPieceColor, PieceData } from "./Piece";
+import { getRandomPieceColor } from "./Piece";
+import { Board, BoardBlock, BoardBlockType, XYPoint, PieceData } from "./Types";
 
 export const GRID_BLOCK_SIZE = 46;
 export const HAND_BLOCK_SIZE = 22;
 export const HITBOX_SIZE = 12;
 export const DRAG_JUMP_LENGTH = 116;
 
-export interface XYPoint {
-  x: number;
-  y: number;
-}
-
-export enum BoardBlockType {
-  EMPTY,
-  HOVERED,
-  HOVERED_BREAK_FILLED,
-  HOVERED_BREAK_EMPTY,
-  FILLED,
-}
-
-export interface BoardBlock {
-  blockType: BoardBlockType;
-  color: Color;
-  hoveredBreakColor: Color;
-  hasGem?: boolean;
-}
-
-export type Board = BoardBlock[][];
+export { Board, BoardBlock, BoardBlockType, XYPoint };
 
 export function newEmptyBoard(boardLength: number): Board {
   return new Array(boardLength).fill(null).map(() => {

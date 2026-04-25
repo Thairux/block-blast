@@ -1,6 +1,6 @@
 import { useAtom, useSetAtom } from "jotai";
 import { useEffect } from "react";
-import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleSheet, Text, View, ViewStyle, ScrollView } from "react-native";
 import Animated, { BounceInUp, Easing, FadeIn, interpolateColor, useAnimatedStyle, useDerivedValue, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from "react-native-reanimated";
 import { MenuStateType, useSetAppState } from "@/hooks/useAppState";
 import { cssColors } from "@/constants/Color";
@@ -8,44 +8,51 @@ import { GameModeType } from '@/hooks/useAppState';
 import HighScores from "./HighScoresMenu";
 import { PieceData } from "@/constants/Piece";
 import { PieceView } from "./PieceView";
+import AboutMenu from "./AboutMenu";
 
-const logoBPiece: PieceData = {
+// Celestial 'A' logo for Aether
+const logoAPiece: PieceData = {
 	matrix: [
-		[1, 1, 1, 0],
+		[0, 1, 1, 0],
 		[1, 0, 0, 1],
-		[1, 1, 1, 0],
-		[1, 0, 0, 1],
-		[1, 1, 1, 0]
-	],
-	distributionPoints: 0,
-	color: { r: 255, g: 51, b: 90 }
-};
-const logoNPiece: PieceData = {
-	matrix: [
 		[1, 1, 1, 1],
-		[1, 0, 0, 1],
 		[1, 0, 0, 1],
 		[1, 0, 0, 1]
 	],
 	distributionPoints: 0,
-	color: { r: 255, g: 0, b: 255 }
+	color: { r: 100, g: 200, b: 255 } // Ethereal Blue
+};
+
+const logoSPiece: PieceData = {
+	matrix: [
+		[1, 1, 1, 1],
+		[0, 0, 1, 0],
+		[0, 1, 0, 0],
+		[1, 1, 1, 1]
+	],
+	distributionPoints: 0,
+	color: { r: 200, g: 100, b: 255 } // Aether Purple
 };
 
 function AetherLogo({blockSize, style}: {blockSize: number, style: ViewStyle}) {
-	const nTop = blockSize * 80/30
-	const nLeft = blockSize * 50/30
-	return <View style={[{width: blockSize * 4 + nLeft, height: blockSize * 4 + nTop}, style]}>
-		<PieceView style={{boxShadow: '5px 5px 50px #000000', backgroundColor: 'rgba(0, 0, 0, 0.6)'}} piece={logoBPiece} blockSize={blockSize}></PieceView>
-		<PieceView style={{transform: [{ translateX: nLeft }, { translateY: nTop }], position: 'absolute', zIndex: -1}} piece={logoNPiece} blockSize={blockSize}></PieceView>
+	const nTop = blockSize * 60/30
+	const nLeft = blockSize * 40/30
+	return <View style={[{width: blockSize * 4 + nLeft, height: blockSize * 5 + nTop}, style]}>
+		<PieceView style={{boxShadow: '0px 0px 40px rgba(100, 200, 255, 0.4)', backgroundColor: 'rgba(0, 0, 0, 0.4)'}} piece={logoAPiece} blockSize={blockSize}></PieceView>
+		<PieceView style={{transform: [{ translateX: nLeft }, { translateY: nTop }], position: 'absolute', zIndex: -1}} piece={logoSPiece} blockSize={blockSize}></PieceView>
 	</View>
 }
 
 export default function MainMenu() {
-	const [ _, appendAppState ] = useSetAppState();
+	const [ appState, appendAppState ] = useSetAppState();
 	
+	if (appState.current === MenuStateType.ABOUT) {
+		return <AboutMenu />;
+	}
+
 	return <View style={styles.container}>
 
-		<AetherLogo style={{position: 'absolute', bottom: 10, left: 10}} blockSize={5}></AetherLogo>
+		<AetherLogo style={{position: 'absolute', bottom: 20, left: 20}} blockSize={6}></AetherLogo>
 		<Animated.Text entering={BounceInUp.duration(800)} style={[styles.logo]}>
 			aether
 		</Animated.Text>
@@ -56,7 +63,7 @@ export default function MainMenu() {
 			}}
 			backgroundColor={cssColors.green}
 			title={"Infinite"}
-			flavorText={"guaranteed fitting pieces"}
+			flavorText={"indestructible survival"}
 			idleBounce={true}
 		/>
 		<MainButton
@@ -78,15 +85,18 @@ export default function MainMenu() {
 			textStyle={{ color: "white" }}
 			idleBounceRotate={true}
 		/>
-		<MainButton onClick = {() => {
-			appendAppState(MenuStateType.HIGH_SCORES)
-		}} backgroundColor={cssColors.pink} title={"High Scores"} />
-		<MainButton onClick = {() => {
-			appendAppState(MenuStateType.OPTIONS)
-		}} backgroundColor={cssColors.green} title={"Options"} />
+		
+        <View style={{flexDirection: 'row', width: '80%', gap: 10, maxWidth: 420}}>
+            <MainButton onClick = {() => {
+                appendAppState(MenuStateType.HIGH_SCORES)
+            }} backgroundColor={cssColors.pink} title={"Scores"} style={{flex: 1}} />
+            <MainButton onClick = {() => {
+                appendAppState(MenuStateType.ABOUT)
+            }} backgroundColor={cssColors.spaceGray} title={"About"} style={{flex: 1}} />
+        </View>
 
 		<Animated.Text entering={FadeIn} style={styles.footer}>
-			beta version
+			v2.0 - celestial edition
 		</Animated.Text>
 	</View>
 }
@@ -180,14 +190,13 @@ function MainButton({
 	}
 	
 	return (
-		<Pressable style={styles.buttonPressable} onPress={onPress} onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
+		<Pressable style={[styles.buttonPressable, style]} onPress={onPress} onHoverIn={onHoverIn} onHoverOut={onHoverOut}>
 			<Animated.View
 				key={title}
 				style={[
 					styles.button,
 					{ backgroundColor },
 					animatedStyle,
-					style ? style : {},
 				]}
 			>
 				<Text style={[styles.buttonText, textStyle ? textStyle : {}]}>
@@ -213,26 +222,29 @@ const styles = StyleSheet.create({
 	},
 	logo: {
 		fontFamily: "Silkscreen",
-		fontSize: 40,
+		fontSize: 50,
 		color: "#FFF",
-		marginBottom: 50,
+		marginBottom: 40,
 		textAlign: "center",
+		textShadowColor: 'rgba(100, 200, 255, 0.8)',
+		textShadowOffset: { width: 0, height: 0 },
+		textShadowRadius: 20
 	},
 	button: {
 		width: "100%",
 		height: "100%",
 		justifyContent: "center",
 		alignItems: "center",
-		marginBottom: 20,
 		borderRadius: 8,
-		borderWidth: 2
+		borderWidth: 2,
+        borderColor: 'black'
 	},
 	buttonPressable: {
 		width: "80%",
-		height: 60,
+		height: 65,
 		justifyContent: "center",
 		alignItems: "center",
-		marginBottom: 20,
+		marginBottom: 15,
 		borderRadius: 10,
 		maxWidth: 420
 	},
@@ -244,14 +256,15 @@ const styles = StyleSheet.create({
 	},
 	buttonFlavorText: {
 		fontFamily: "Silkscreen",
-		fontSize: 14,
+		fontSize: 12,
 		color: "rgb(30, 30, 30)",
-		textAlign: 'center'
+		textAlign: 'center',
+        opacity: 0.7
 	},
 	footer: {
 		fontFamily: "Silkscreen",
-		fontSize: 16,
-		color: "#555",
+		fontSize: 14,
+		color: "#777",
 		position: "absolute",
 		bottom: 20,
 	},

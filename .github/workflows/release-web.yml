@@ -1,0 +1,69 @@
+name: Release Web
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🏷️ Get version from app.json
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 🚀 Build Web
+        run: npx expo export -p web
+
+      - name: 🔧 Fix Base Path for GitHub Pages
+        run: |
+          # The app uses /aether as baseUrl in app.json
+          # No further action needed if baseUrl is correctly set
+          mv dist dist-temp
+          mkdir dist
+          mv dist-temp dist/block-blast
+
+      - name: 📤 Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: 🏷️ Create Release Tag
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag v${{ steps.get_version.outputs.version }} || echo "Tag already exists"
+          git push origin v${{ steps.get_version.outputs.version }} || echo "Already pushed"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 🚀 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
