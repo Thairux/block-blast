@@ -22,27 +22,26 @@ jobs:
           node-version: 24
           cache: 'npm'
 
-      - name: 🧹 Cleanup Submodule Ghosts
-        run: |
-          git config --local --unset-all submodule.temp_assets_check.url || true
-          git config --local --unset-all submodule.temp_assets_check.path || true
-          rm -rf .git/modules/temp_assets_check || true
-
-      - name: 🏗 Setup EAS
-        uses: expo/expo-github-action@v8
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          distribution: 'zulu'
+          java-version: '17'
 
       - name: 📦 Install dependencies
-        run: |
-          npm install
-          npm install -g eas-cli
+        run: npm install
 
-      - name: 🚀 Build Android APK (Multi-Arch)
+      - name: 🛠 Prebuild Android
+        run: npx expo prebuild --platform android --no-install
+
+      - name: 🚀 Build Android APK (Universal)
         run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          cd ..
           mkdir -p build
-          eas build --platform android --profile production-apk --local --non-interactive --output build/aether-universal.apk
+          cp android/app/build/outputs/apk/release/app-release.apk build/aether-universal.apk
 
       - name: 📝 Generate Release Notes & Tutorial
         run: |
@@ -58,10 +57,10 @@ jobs:
           5. **Play:** Find the celestial 'A' icon in your app drawer and enjoy!
 
           ### ✨ What's New
-          - Complete 3D beveled block graphics overhaul.
+          - Optimized performance and mobile web layout.
           - Indestructible Survival Engine for Infinite mode.
-          - Multi-level Puzzle mode with strategic gem placement.
-          - Professional celestial branding and onboarding.
+          - Strategic IQ rating logic (beat the loop).
+          - Professional celestial branding.
           EOF
 
       - name: 🏷️ Create GitHub Release
