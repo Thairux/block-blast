@@ -1,4 +1,4 @@
-name: Build Android
+name: Build & Release Android APKs
 
 on:
   push:
@@ -28,18 +28,38 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Build Android AAB
-        run: eas build --platform android --profile production --local --non-interactive --output build/aether.aab
+      - name: 🚀 Build Android APK (Multi-Arch)
+        run: |
+          mkdir -p build
+          # Using local build to avoid EAS cloud credits/queues if possible, 
+          # otherwise it defaults to cloud if not configured for local.
+          # We'll use the production-apk profile we created.
+          npx eas build --platform android --profile production-apk --local --non-interactive --output build/aether-universal.apk
 
-      - name: 📤 Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aether-android-build
-          path: build/aether.aab
+      - name: 📝 Generate Release Notes & Tutorial
+        run: |
+          cat <<EOF > release_notes.md
+          ## 🌌 Aether v$(node -p "require('./app.json').expo.version")
+
+          ### 📦 Download & Install Guide
+          To install Aether on your Android device:
+          1. **Download:** Click on the \`aether-universal.apk\` asset below.
+          2. **Open:** Once downloaded, tap the file in your notification bar or downloads folder.
+          3. **Permissions:** If prompted, allow "Install from Unknown Sources" in your browser/file manager settings.
+          4. **Install:** Follow the system prompts to complete the installation.
+          5. **Play:** Find the celestial 'A' icon in your app drawer and enjoy!
+
+          ### ✨ What's New
+          - Complete 3D beveled block graphics overhaul.
+          - Indestructible Survival Engine for Infinite mode.
+          - Multi-level Puzzle mode with strategic gem placement.
+          - Professional celestial branding and onboarding.
+          EOF
 
       - name: 🏷️ Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/aether.aab
+          body_path: release_notes.md
+          files: build/aether-universal.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

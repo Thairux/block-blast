@@ -256,7 +256,7 @@ function Onboarding({ mode, visible, onDismiss }: { mode: GameModeType, visible:
             case GameModeType.Infinite:
                 return {
                     title: "Infinite Rules",
-                    text: "Every hand is guaranteed playable by our AI. Your only challenge is to try and fail. Can you even reach a game over?"
+                    text: "Every hand is guaranteed playable by our engine. Your only challenge is to try and fail. Can you even reach a game over?"
                 };
             case GameModeType.Classic:
                 return {
@@ -308,7 +308,7 @@ function GameOverOverlay({ gameOver, onRestart, gameMode, blocksPlaced, score }:
         if (finalScore < 500) return "Primate";
         if (finalScore < 2000) return "Human";
         if (finalScore < 5000) return "Aether Entity";
-        return "Celestial AI";
+        return "Celestial Entity";
     };
 
     const isInfinite = gameMode === GameModeType.Infinite;

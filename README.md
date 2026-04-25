@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/Thairux/block-blast?style=social)](https://github.com/Thairux/block-blast/stargazers)
 [![Deployment](https://github.com/Thairux/block-blast/actions/workflows/release-web.yml/badge.svg)](https://github.com/Thairux/block-blast/actions)
 
-**Aether** is a high-fidelity, strategic block-placing experience redesigned for precision, visual excellence, and infinite challenge. Built with React Native, Expo, and a high-performance backtracking AI.
+**Aether** is a high-fidelity, strategic block-placing experience redesigned for precision, visual excellence, and infinite challenge. Built with React Native, Expo, and a high-performance backtracking engine.
 
 [**Play Aether Web**](https://thairux.github.io/block-blast/) • [**Documentation**](./docs/README.md) • [**Report Bug**](https://github.com/Thairux/block-blast/issues)
 
@@ -16,7 +16,7 @@
 - **🛡️ Indestructible Infinite Mode:** Powered by a look-ahead backtracking engine that guarantees a valid survival path exists for every hand.
 - **💎 Strategic Puzzle Mode:** Structured level progression where you clear targeted blocks to collect gems.
 - **🎨 3D Beveled Visuals:** High-quality, mitered 3D block graphics with dynamic lighting and shadows.
-- **🤖 Survival Governor:** An adaptive AI that intelligently scales piece complexity based on board density.
+- **🤖 Survival Governor:** An adaptive system that intelligently scales piece complexity based on board density.
 - **📱 Universal Compatibility:** Seamless drag-and-drop gameplay across Web, iOS, and Android.
 
 ---
@@ -25,7 +25,7 @@
 
 | Mode | Challenge | Goal |
 | :--- | :--- | :--- |
-| **Infinite** | "Try and Fail" | Survive the loop. The AI works against your mistakes. |
+| **Infinite** | "Try and Fail" | Survive the loop. The engine works against your mistakes. |
 | **Classic** | Pure Strategy | Traditional block clearing with random piece generation. |
 | **Puzzle** | Precision | Collect gems hidden in blocks to advance levels. |
 

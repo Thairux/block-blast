@@ -14,6 +14,7 @@ The heart of Aether's survival capability is our recursive backtracking solver.
 - **Pathfinding:** For each permutation, the engine exhaustively searches for a valid placement sequence that results in a non-terminal board state.
 - **Safety Fallback:** If $P(\text{survival}) = 0$, the engine generates an adaptive hand containing higher entropy of low-complexity pieces (e.g., 1x1 survival blocks).
 
+
 ## Graphics & Rendering
 
 Aether uses a custom-built 3D Shader-like approach via CSS/Style-based border mitigation.
