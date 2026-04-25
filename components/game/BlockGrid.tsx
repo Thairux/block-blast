@@ -8,14 +8,13 @@ import {
 } from "@/constants/Board";
 import { colorToHex } from "@/constants/Color";
 import { Hand } from "@/constants/Hand";
-import { randomWithRange } from "@/constants/Math";
 import {
 	createEmptyBlockStyle,
 	createFilledBlockStyle,
 } from "@/constants/Piece";
 import { useDroppable } from "@mgcrea/react-native-dnd";
 import { useEffect } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, {
 	SharedValue,
 	runOnJS,
@@ -34,11 +33,7 @@ interface BlockGridProps {
 	draggingPiece: SharedValue<number | null>
 }
 
-function encodeDndId(x: number, y: number): string {
-	return `${x},${y}`;
-}
-
-function createBlockStyle(x: number, y: number, board: SharedValue<Board>): any {
+function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: number, board: SharedValue<Board>, possibleBoardDropSpots: SharedValue<PossibleBoardSpots> }) {
     const boardSize = board.value.length;
     const loadBlockFlash = useSharedValue(0);
     const placedBlockFall = useSharedValue(0);
@@ -135,12 +130,24 @@ function createBlockStyle(x: number, y: number, board: SharedValue<Board>): any 
 
         return {...style, transform: []};
     });
+
+    const blockPositionStyle = {
+        position: "absolute",
+        top: y * GRID_BLOCK_SIZE,
+        left: x * GRID_BLOCK_SIZE,
+    };
     
     return (
-        <Animated.View style={animatedStyle}>
+        <Animated.View style={[styles.emptyBlock, blockPositionStyle as any, animatedStyle]}>
             {board.value[y][x].hasGem && (
                 <Text style={{fontSize: 20, textAlign: 'center', lineHeight: GRID_BLOCK_SIZE}}>💎</Text>
             )}
+            <BlockDroppable
+                x={x}
+                y={y}
+                style={styles.hitbox}
+                possibleBoardDropSpots={possibleBoardDropSpots}
+            />
         </Animated.View>
     );
 }
@@ -152,27 +159,15 @@ export default function BlockGrid({
 	hand
 }: BlockGridProps) {
 	const blockElements: any[] = [];
-	const boardLength = board.value.length;
 	forEachBoardBlock(board.value, (_block, x, y) => {
-		const blockStyle = createBlockStyle(x, y, board);
-		const blockPositionStyle = {
-			position: "absolute",
-			top: y * GRID_BLOCK_SIZE,
-			left: x * GRID_BLOCK_SIZE,
-		};
-
 		blockElements.push(
-			<Animated.View
+			<BlockCell
 				key={`av${x},${y}`}
-				style={[styles.emptyBlock, blockPositionStyle as any, blockStyle]}
-			>
-				<BlockDroppable
-					x={x}
-					y={y}
-					style={styles.hitbox}
-					possibleBoardDropSpots={possibleBoardDropSpots}
-				></BlockDroppable>
-			</Animated.View>
+                x={x}
+                y={y}
+                board={board}
+                possibleBoardDropSpots={possibleBoardDropSpots}
+			/>
 		);
 	});
 	
@@ -195,8 +190,8 @@ export default function BlockGrid({
 			style={[
 				styles.grid,
 				{
-					width: GRID_BLOCK_SIZE * boardLength + 6,
-					height: GRID_BLOCK_SIZE * boardLength + 6,
+					width: GRID_BLOCK_SIZE * board.value.length + 6,
+					height: GRID_BLOCK_SIZE * board.value.length + 6,
 				},
 				gridStyle
 			]}
@@ -227,15 +222,7 @@ function BlockDroppable({
 		id,
 	});
 
-	// internally of react-native-dnd, the cache of this draggable's layout is only updated in onLayout
-	// reanimated styles/animated styles do not call onLayout
-	// because of above, react-native-dnd does not see width or height changes and collisions become off
-	// below is a very hacky fix
-
 	const updateLayout = () => {
-		// this is a weird solution, but pretty much there is a race condition with updating layout immediately
-		// after returning a style within useAnimatedStyle on the UI thread
-		// 20ms should be good (> 1000ms/60)
 		setTimeout(() => {
 			(props.onLayout as any)(null);
 		}, 1000 / 60);
@@ -245,7 +232,6 @@ function BlockDroppable({
 		runOnJS(updateLayout)();
 		const active = possibleBoardDropSpots.value[y][x] == 1;
 		if (active) {
-			// use a smaller size droppable than the block so that detection does not overlap with other blocks.
 			return {
 				width: HITBOX_SIZE,
 				height: HITBOX_SIZE,
@@ -277,8 +263,6 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 	},
 	grid: {
-		//width: GRID_BLOCK_SIZE * BOARD_LENGTH + 8,
-		//height: GRID_BLOCK_SIZE * BOARD_LENGTH + 8,
 		position: "relative",
 		backgroundColor: "rgb(0, 0, 0, 1)",
 		borderWidth: 3,
