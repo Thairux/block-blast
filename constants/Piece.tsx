@@ -1,4 +1,4 @@
-import { Color, colorToHex } from "./Color";
+import { Color, colorToHex, lighten, darken } from "./Color";
 
 export interface PieceData {
 	matrix: number[][];
@@ -336,56 +336,33 @@ export function getFittingPieceWorklet(board: any): PieceData {
 
 function getBorderColors(backgroundColor: Color) {
 	"worklet";
-	const { r, g, b } = backgroundColor;
-
-	// multipliers calculated from a screenshot
-	const multipliers = {
-		borderTopColor: { r: 214 / 131, g: 167 / 83, b: 247 / 203 },
-		borderLeftColor: { r: 164 / 131, g: 119 / 83, b: 224 / 203 },
-		borderRightColor: { r: 123 / 131, g: 69 / 83, b: 153 / 203 },
-		borderBottomColor: { r: 92 / 131, g: 43 / 83, b: 132 / 203 }
-	};
-
-	const clamp = (value: number) => Math.min(Math.max(Math.round(value), 0), 255);
-
-	const computeColor = (mult: any) =>
-		`rgb(${clamp(r * mult.r)}, ${clamp(g * mult.g)}, ${clamp(b * mult.b)})`;
-
 	return {
-		borderTopColor: computeColor(multipliers.borderTopColor),
-		borderLeftColor: computeColor(multipliers.borderLeftColor),
-		borderRightColor: computeColor(multipliers.borderRightColor),
-		borderBottomColor: computeColor(multipliers.borderBottomColor)
+		borderTopColor: colorToHex(lighten(backgroundColor, 0.5)),
+		borderLeftColor: colorToHex(lighten(backgroundColor, 0.25)),
+		borderRightColor: colorToHex(darken(backgroundColor, 0.25)),
+		borderBottomColor: colorToHex(darken(backgroundColor, 0.5))
 	};
 }
 
-export function createFilledBlockStyle(color: Color, borderWidth: number = 7): object {
+export function createFilledBlockStyle(color: Color, borderWidth: number = 6): object {
 	"worklet";
 	return {
-		backgroundColor: colorToHex(color), //'rgb(131, 83, 203)'
+		backgroundColor: colorToHex(color),
 		...getBorderColors(color),
 		borderWidth: borderWidth,
+		borderRadius: 4,
 		boxSizing: 'border-box',
-		boxShadow: 'none',
-		shadowOpacity: 0,
 	}
 }
 
 export function createEmptyBlockStyle(): object {
 	"worklet";
-	const borderColor = 'rgb(40, 40, 40)';
+	const borderColor = 'rgba(255, 255, 255, 0.1)';
 	return {
-		backgroundColor: 'rgba(0, 0, 0, 0)',
+		backgroundColor: 'rgba(255, 255, 255, 0.05)',
 		borderColor: borderColor,
-		borderLeftColor: borderColor,
-		borderTopColor: borderColor,
-		borderRightColor: borderColor,
-		borderBottomColor: borderColor,
-		opacity: 1,
-		borderWidth: 0.25,
-		borderRadius: 0,
+		borderWidth: 1,
+		borderRadius: 4,
 		boxSizing: 'border-box',
-		boxShadow: 'none',
-		shadowOpacity: 0,
 	}
 }

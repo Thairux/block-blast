@@ -74,5 +74,23 @@ export function colorLerp(a: Color, b: Color, t: number): Color {
       b: lerp(a.b, b.b, t),
     };
   }
+
+export function lighten(color: Color, amount: number): Color {
+    'worklet';
+    return {
+        r: Math.min(255, color.r + (255 - color.r) * amount),
+        g: Math.min(255, color.g + (255 - color.g) * amount),
+        b: Math.min(255, color.b + (255 - color.b) * amount),
+    };
+}
+
+export function darken(color: Color, amount: number): Color {
+    'worklet';
+    return {
+        r: Math.max(0, color.r * (1 - amount)),
+        g: Math.max(0, color.g * (1 - amount)),
+        b: Math.max(0, color.b * (1 - amount)),
+    };
+}
   
   
