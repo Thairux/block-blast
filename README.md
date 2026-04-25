@@ -1,6 +1,6 @@
-# Block Blast Redesign (Expo)
+# Aether (Redesign)
 
-This project is a complete redesign of Block Blast, now built with React Native and Expo.
+This project is a complete redesign of the block blast genre, now named Aether.
 
 ## Goal
 Implement a visually appealing Block Blast game with 3D-styled blocks and three distinct game modes:

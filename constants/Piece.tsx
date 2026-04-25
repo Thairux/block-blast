@@ -6,9 +6,6 @@ export interface PieceData {
 	color: Color;
 }
 
-// same as piecedata but with no color
-// this is because color is random each time
-// so we will use this one to store piece shape and info
 interface PieceDataSaved {
 	matrix: number[][];
 	distributionPoints: number
@@ -292,7 +289,6 @@ export function getRandomPieceWorklet(): PieceData {
 
 export function getFittingPieceWorklet(board: any): PieceData {
 	"worklet";
-	// Shuffle pieces to try them in random order
 	const shuffled = [...piecesData].sort(() => Math.random() - 0.5);
 	const boardLength = board.length;
 
@@ -300,7 +296,6 @@ export function getFittingPieceWorklet(board: any): PieceData {
 		const pieceHeight = pieceTemplate.matrix.length;
 		const pieceWidth = pieceTemplate.matrix[0].length;
 
-		// Try random positions for this piece
 		const positions = [];
 		for (let y = 0; y <= boardLength - pieceHeight; y++) {
 			for (let x = 0; x <= boardLength - pieceWidth; x++) {
@@ -313,7 +308,7 @@ export function getFittingPieceWorklet(board: any): PieceData {
 			let canFit = true;
 			for (let py = 0; py < pieceHeight; py++) {
 				for (let px = 0; px < pieceWidth; px++) {
-					if (pieceTemplate.matrix[py][px] === 1 && board[pos.y + py][pos.x + px].blockType === 4) { // 4 is FILLED
+					if (pieceTemplate.matrix[py][px] === 1 && board[pos.y + py][pos.x + px].blockType === 4) {
 						canFit = false;
 						break;
 					}
@@ -330,39 +325,39 @@ export function getFittingPieceWorklet(board: any): PieceData {
 		}
 	}
 
-	// Fallback to random if nothing fits (should not happen often)
 	return getRandomPieceWorklet();
 }
 
 function getBorderColors(backgroundColor: Color) {
 	"worklet";
 	return {
-		borderTopColor: colorToHex(lighten(backgroundColor, 0.5)),
-		borderLeftColor: colorToHex(lighten(backgroundColor, 0.25)),
-		borderRightColor: colorToHex(darken(backgroundColor, 0.25)),
-		borderBottomColor: colorToHex(darken(backgroundColor, 0.5))
+		borderTopColor: colorToHex(lighten(backgroundColor, 0.4)),
+		borderLeftColor: colorToHex(lighten(backgroundColor, 0.2)),
+		borderRightColor: 'black',
+		borderBottomColor: 'black'
 	};
 }
 
-export function createFilledBlockStyle(color: Color, borderWidth: number = 6): object {
+export function createFilledBlockStyle(color: Color, borderWidth: number = 2): object {
 	"worklet";
 	return {
 		backgroundColor: colorToHex(color),
 		...getBorderColors(color),
 		borderWidth: borderWidth,
-		borderRadius: 4,
+		borderColor: 'black', // Explicit black border
+		borderRadius: 0,
 		boxSizing: 'border-box',
 	}
 }
 
 export function createEmptyBlockStyle(): object {
 	"worklet";
-	const borderColor = 'rgba(255, 255, 255, 0.1)';
+	const borderColor = 'rgba(255, 255, 255, 0.2)';
 	return {
 		backgroundColor: 'rgba(255, 255, 255, 0.05)',
 		borderColor: borderColor,
 		borderWidth: 1,
-		borderRadius: 4,
+		borderRadius: 0,
 		boxSizing: 'border-box',
 	}
 }

@@ -1,25 +1,23 @@
 import { PieceData, getBlockCount } from '@/constants/Piece';
 import { DndProvider, DndProviderProps, Rectangle } from '@mgcrea/react-native-dnd';
-import React, { useEffect } from 'react';
-import { Platform, SafeAreaView, StyleSheet, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Platform, SafeAreaView, StyleSheet, View, Text } from 'react-native';
 import { GestureHandlerRootView, State } from 'react-native-gesture-handler';
-import { ReduceMotion, runOnJS, useSharedValue } from 'react-native-reanimated';
+import Animated, { ReduceMotion, runOnJS, useSharedValue, FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { BoardBlockType, GRID_BLOCK_SIZE, JS_emptyPossibleBoardSpots, PossibleBoardSpots, XYPoint, breakLines, clearHoverBlocks, createPossibleBoardSpots, emptyPossibleBoardSpots, newEmptyBoard, placePieceOntoBoard, updateHoveredBreaks } from '@/constants/Board';
+import { Audio } from 'expo-av';
+import { BoardBlockType, GRID_BLOCK_SIZE, JS_emptyPossibleBoardSpots, PossibleBoardSpots, XYPoint, breakLines, clearHoverBlocks, createPossibleBoardSpots, emptyPossibleBoardSpots, newEmptyBoard, placePieceOntoBoard, updateHoveredBreaks, canPlaceAnyPiece } from '@/constants/Board';
 import { StatsGameHud, StickyGameHud } from '@/components/game/GameHud';
 import BlockGrid from '@/components/game/BlockGrid';
 import { createHandWorklet, createRandomHand } from '@/constants/Hand';
 import HandPieces from '@/components/game/HandPieces';
-import { GameModeType } from '@/hooks/useAppState';
+import { GameModeType, useSetAppState, MenuStateType } from '@/hooks/useAppState';
 import { createHighScore, HighScoreId, updateHighScore } from '@/constants/Storage';
 import { getRandomTemplate, applyTemplate } from '@/constants/Templates';
 
 const pieceOverlapsRectangle = (layout: Rectangle, other: Rectangle) => {
 	"worklet";
-	if (other.width == 0 && other.height == 0) {
-		return false;
-	}
-
+	if (other.width == 0 && other.height == 0) return false;
 	return (
 		layout.x < other.x + other.width &&
 		layout.x + GRID_BLOCK_SIZE > other.x &&
@@ -29,13 +27,8 @@ const pieceOverlapsRectangle = (layout: Rectangle, other: Rectangle) => {
 };
 
 const SPRING_CONFIG_MISSED_DRAG = {
-	mass: 1,
-	damping: 1,
-	stiffness: 500,
-	overshootClamping: true,
-	restDisplacementThreshold: 0.01,
-	restSpeedThreshold: 0.01,
-	reduceMotion: ReduceMotion.Never,
+	mass: 1, damping: 1, stiffness: 500, overshootClamping: true,
+	restDisplacementThreshold: 0.01, restSpeedThreshold: 0.01, reduceMotion: ReduceMotion.Never,
 }
 
 function decodeDndId(id: string): XYPoint {
@@ -55,6 +48,7 @@ function runPiecePlacedHaptic() {
 export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 	const boardLength = gameMode === GameModeType.Puzzle ? 6 : 8;
 	const handSize = 3;
+    const [ setAppState ] = useSetAppState();
 	
 	const board = useSharedValue(newEmptyBoard(boardLength));
 	const draggingPiece = useSharedValue<number | null>(null);
@@ -63,15 +57,33 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 	const score = useSharedValue(0);
 	const combo = useSharedValue(0);
 	const lastBrokenLine = useSharedValue(0);
+	const gameOver = useSharedValue(false);
 	
 	const currentLevel = useSharedValue(1);
 	const gemsCollected = useSharedValue(0);
 	const gemsRequired = useSharedValue(5);
 
 	const scoreStorageId = useSharedValue<HighScoreId | undefined>(undefined);
+    const [encouragement, setEncouragement] = useState<string | null>(null);
+
+    const playSound = async (type: 'place' | 'clear' | 'gameover') => {
+        let file;
+        if (type === 'place') file = require('../../assets/audio/sfx/place.wav');
+        else if (type === 'clear') file = require('../../assets/audio/sfx/clear.wav');
+        else if (type === 'gameover') file = require('../../assets/audio/sfx/game_over.wav');
+        
+        const { sound } = await Audio.Sound.createAsync(file);
+        await sound.playAsync();
+    };
+
+    const showEncouragement = (lines: number) => {
+        const texts = ["Nice!", "Great!", "Amazing!", "Incredible!", "PERFECT!"];
+        const text = texts[Math.min(lines - 1, texts.length - 1)];
+        setEncouragement(text);
+        setTimeout(() => setEncouragement(null), 1500);
+    };
 
 	useEffect(() => {
-		// Initialize board with templates for Infinite and Classic
 		if (gameMode !== GameModeType.Puzzle) {
 			const template = getRandomTemplate(boardLength);
 			if (template) {
@@ -80,7 +92,6 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 				board.value = newBoard;
 			}
 		} else {
-			// Puzzle mode initial gems
 			const newBoard = [...board.value];
 			for (let i = 0; i < 5; i++) {
 				const rx = Math.floor(Math.random() * boardLength);
@@ -90,12 +101,8 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 			}
 			board.value = newBoard;
 		}
-		
-		// Initial hand
 		hand.value = createHandWorklet(handSize, gameMode, board.value);
 
-		if (scoreStorageId.value != undefined)
-			return;
 		createHighScore({score: score.value, date: new Date().getTime(), type: gameMode}).then((id) => {
 			scoreStorageId.value = id;
 		});
@@ -104,30 +111,25 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 	const handleDragEnd: DndProviderProps["onDragEnd"] = ({ active, over }) => {
 		"worklet";
 		if (over) {
-			if (draggingPiece.value == null) {
-				return;
-			}
+			if (draggingPiece.value == null) return;
 
 			const dropIdStr = over.id.toString();
 			const {x: dropX, y: dropY} = decodeDndId(dropIdStr);
 			const piece: PieceData = hand.value[draggingPiece.value!]!;
 
-			if (Platform.OS != 'web')
-				runPiecePlacedHaptic();
+			if (Platform.OS != 'web') runPiecePlacedHaptic();
+            runOnJS(playSound)('place');
 
 			const newBoard = clearHoverBlocks([...board.value]);
 			placePieceOntoBoard(newBoard, piece, dropX, dropY, BoardBlockType.FILLED)
 			const { lines: linesBroken, gems } = breakLines(newBoard);
 			
-			// Update gems for puzzle mode
 			if (gameMode === GameModeType.Puzzle) {
 				gemsCollected.value += gems;
 				if (gemsCollected.value >= gemsRequired.value) {
-					// Level Complete!
 					currentLevel.value += 1;
 					gemsCollected.value = 0;
 					gemsRequired.value += 2;
-					// Reset board for next level
 					const nextBoard = newEmptyBoard(boardLength);
 					for (let i = 0; i < gemsRequired.value; i++) {
 						const rx = Math.floor(Math.random() * boardLength);
@@ -135,7 +137,6 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 						nextBoard[ry][rx].hasGem = true;
 						nextBoard[ry][rx].blockType = BoardBlockType.FILLED;
 					}
-					// Use return for worklet safety or just assign
 					board.value = nextBoard;
 				}
 			}
@@ -143,16 +144,16 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 			const pieceBlockCount = getBlockCount(piece);
 			score.value += pieceBlockCount;
 			if (linesBroken > 0) {
+                runOnJS(playSound)('clear');
+                runOnJS(showEncouragement)(linesBroken);
 				lastBrokenLine.value = 0;
 				combo.value += linesBroken;
 				score.value += linesBroken * boardLength * (combo.value / 2) * pieceBlockCount;
 			} else {
 				lastBrokenLine.value++;
-				if (lastBrokenLine.value >= handSize) {
-					combo.value = 0;
-				}
+				if (lastBrokenLine.value >= handSize) combo.value = 0;
 			}
-			if (scoreStorageId)
+			if (scoreStorageId.value)
 				runOnJS(updateHighScore)(scoreStorageId.value!, {score: score.value, date: new Date().getTime(), type: gameMode});
 			
 			const newHand = [...hand.value];
@@ -160,10 +161,7 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 
 			let empty = true
 			for (let i = 0; i < handSize; i++) {
-				if (newHand[i] != null) {
-					empty = false;
-					break;
-				}
+				if (newHand[i] != null) { empty = false; break; }
 			}
 			if (empty) {
 				hand.value = createHandWorklet(handSize, gameMode, newBoard);
@@ -171,6 +169,12 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 				hand.value = newHand;
 			}
 			board.value = newBoard;
+
+            // Check Game Over
+            if (!canPlaceAnyPiece(newBoard, hand.value)) {
+                gameOver.value = true;
+                runOnJS(playSound)('gameover');
+            }
 		} else {
 			board.value = clearHoverBlocks([...board.value]);
 		}
@@ -189,9 +193,7 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 
 	const handleFinalize: DndProviderProps["onFinalize"] = ({ state }) => {
 		"worklet";
-		if (state !== State.END) {
-			draggingPiece.value = null;
-		}
+		if (state !== State.END) draggingPiece.value = null;
 	};
 
 	const handleUpdate: DndProviderProps["onUpdate"] = (event, {activeId, activeLayout, droppableActiveId}) => {
@@ -200,18 +202,12 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 			board.value = clearHoverBlocks([...board.value]);
 			return;
 		}
-
-		if (draggingPiece.value == null) {
-			return;
-		}
-
+		if (draggingPiece.value == null) return;
 		const dropIdStr = droppableActiveId.toString();
 		const {x: dropX, y: dropY} = decodeDndId(dropIdStr);
 		const piece: PieceData = hand.value[draggingPiece.value!]!;
-
 		const newBoard = clearHoverBlocks([...board.value]);
 		updateHoveredBreaks(newBoard, piece, dropX, dropY);
-
 		board.value = newBoard
 	}
 	
@@ -225,22 +221,64 @@ export const Game = (({gameMode}: {gameMode: GameModeType}) => {
 						<BlockGrid board={board} possibleBoardDropSpots={possibleBoardDropSpots} hand={hand} draggingPiece={draggingPiece}></BlockGrid>
 						<HandPieces hand={hand}></HandPieces>
 					</DndProvider>
+
+                    {encouragement && (
+                        <Animated.View entering={FadeInUp} exiting={FadeOutUp} style={styles.encouragementContainer}>
+                            <Text style={styles.encouragementText}>{encouragement}</Text>
+                        </Animated.View>
+                    )}
+
+                    <GameOverOverlay gameOver={gameOver} onRestart={() => setAppState(MenuStateType.MENU)} />
 				</View>
 			</GestureHandlerRootView>
 		</SafeAreaView>
 	);
 })
 
+function GameOverOverlay({ gameOver, onRestart }: { gameOver: SharedValue<boolean>, onRestart: () => void }) {
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (gameOver.value) {
+                setVisible(true);
+                clearInterval(interval);
+            }
+        }, 500);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (!visible) return null;
+
+    return (
+        <View style={styles.overlay}>
+            <Text style={styles.gameOverText}>GAME OVER</Text>
+            <Text style={styles.restartButton} onPress={onRestart}>MAIN MENU</Text>
+        </View>
+    );
+}
+
 const styles = StyleSheet.create({
 	root: {
-		width: '100%',
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 0,
-		overflow: 'hidden',
-		backgroundColor: 'rgba(0, 0, 0, 0.4)' 
-	}
+		width: '100%', flex: 1, justifyContent: 'center', alignItems: 'center',
+		padding: 0, overflow: 'hidden', backgroundColor: 'rgba(0, 0, 0, 0.4)' 
+	},
+    encouragementContainer: {
+        position: 'absolute', top: 150, zIndex: 2000,
+    },
+    encouragementText: {
+        fontFamily: 'Silkscreen', fontSize: 40, color: 'yellow',
+        textShadowColor: 'black', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 5
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', zIndex: 3000
+    },
+    gameOverText: {
+        fontFamily: 'Silkscreen', fontSize: 60, color: 'red', marginBottom: 20
+    },
+    restartButton: {
+        fontFamily: 'Silkscreen', fontSize: 30, color: 'white', backgroundColor: 'blue', padding: 15, borderRadius: 10
+    }
 })
 
 export default Game;

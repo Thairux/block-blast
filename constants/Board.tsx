@@ -257,3 +257,35 @@ export function forEachBoardBlock(board: Board, each: ((block: BoardBlock, x: nu
     }
   }
 }
+
+export function canPlacePiece(board: Board, piece: PieceData): boolean {
+  "worklet";
+  const boardLength = board.length;
+  const pieceHeight = piece.matrix.length;
+  const pieceWidth = piece.matrix[0].length;
+
+  for (let boardY = 0; boardY <= boardLength - pieceHeight; boardY++) {
+    for (let boardX = 0; boardX <= boardLength - pieceWidth; boardX++) {
+      let canFit = true;
+      for (let py = 0; py < pieceHeight; py++) {
+        for (let px = 0; px < pieceWidth; px++) {
+          if (piece.matrix[py][px] === 1 && board[boardY + py][boardX + px].blockType === BoardBlockType.FILLED) {
+            canFit = false;
+            break;
+          }
+        }
+        if (!canFit) break;
+      }
+      if (canFit) return true;
+    }
+  }
+  return false;
+}
+
+export function canPlaceAnyPiece(board: Board, hand: (PieceData | null)[]): boolean {
+  "worklet";
+  for (const piece of hand) {
+    if (piece && canPlacePiece(board, piece)) return true;
+  }
+  return false;
+}

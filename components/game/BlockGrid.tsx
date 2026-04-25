@@ -83,13 +83,6 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
     const animatedStyle = useAnimatedStyle(() => {
         const block = board.value[y][x];
         
-        if (block.blockType == BoardBlockType.EMPTY && loadBlockFlash.value != 0) {
-            return {
-                ...createFilledBlockStyle(block.color),
-                opacity: Math.min(1, loadBlockFlash.value * 10),
-            };
-        }
-
         if (placedBlockFall.value > 0) {
             let progress = placedBlockFall.value;
 			progress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);// easeOutCirc
@@ -111,9 +104,8 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
             }
         }
 
-        let style: any = createEmptyBlockStyle();
         if (block.blockType == BoardBlockType.FILLED || block.blockType == BoardBlockType.HOVERED) {
-            style = {
+            return {
                 ...createFilledBlockStyle(block.color),
                 opacity: block.blockType == BoardBlockType.HOVERED ? 0.3 : 1,
             };
@@ -122,13 +114,15 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
                 block.blockType == BoardBlockType.HOVERED_BREAK_EMPTY
                     ? block.color
                     : block.hoveredBreakColor;
-            style = {
+            return {
                 ...createFilledBlockStyle(blockColor),
-                boxShadow: '0px 0px 30px ' + colorToHex(blockColor)
             };
         }
 
-        return {...style, transform: []};
+        return {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            transform: []
+        };
     });
 
     const blockPositionStyle = {
@@ -257,6 +251,7 @@ const styles = StyleSheet.create({
 		height: GRID_BLOCK_SIZE,
 		margin: 0,
 		borderWidth: 1,
+		borderColor: 'rgba(255, 255, 255, 0.2)', // Stable grid line color
 		borderRadius: 0,
 		position: "absolute",
 		justifyContent: "center",

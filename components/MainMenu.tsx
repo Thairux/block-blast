@@ -31,7 +31,7 @@ const logoNPiece: PieceData = {
 	color: { r: 255, g: 0, b: 255 }
 };
 
-function BlockerinoLogo({blockSize, style}: {blockSize: number, style: ViewStyle}) {
+function AetherLogo({blockSize, style}: {blockSize: number, style: ViewStyle}) {
 	const nTop = blockSize * 80/30
 	const nLeft = blockSize * 50/30
 	return <View style={[{width: blockSize * 4 + nLeft, height: blockSize * 4 + nTop}, style]}>
@@ -45,9 +45,9 @@ export default function MainMenu() {
 	
 	return <View style={styles.container}>
 
-		<BlockerinoLogo style={{position: 'absolute', bottom: 10, left: 10}} blockSize={5}></BlockerinoLogo>
+		<AetherLogo style={{position: 'absolute', bottom: 10, left: 10}} blockSize={5}></AetherLogo>
 		<Animated.Text entering={BounceInUp.duration(800)} style={[styles.logo]}>
-			blockerino
+			aether
 		</Animated.Text>
 
 		<MainButton

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "blockerino",
-    "slug": "blockerino",
+    "name": "aether",
+    "slug": "aether",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -45,7 +45,7 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "baseUrl": "/blockerino"
+      "baseUrl": "/aether"
     }
   }
 }
