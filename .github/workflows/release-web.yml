@@ -27,8 +27,14 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
+
+      - name: 🧹 Cleanup Submodule Ghosts
+        run: |
+          git config --local --unset-all submodule.temp_assets_check.url || true
+          git config --local --unset-all submodule.temp_assets_check.path || true
+          rm -rf .git/modules/temp_assets_check || true
 
       - name: 📦 Install dependencies
         run: npm install

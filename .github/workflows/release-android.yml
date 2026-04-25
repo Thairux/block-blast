@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
       - name: ⚙️ Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
 
       - name: 🏗 Setup EAS
@@ -31,9 +34,6 @@ jobs:
       - name: 🚀 Build Android APK (Multi-Arch)
         run: |
           mkdir -p build
-          # Using local build to avoid EAS cloud credits/queues if possible, 
-          # otherwise it defaults to cloud if not configured for local.
-          # We'll use the production-apk profile we created.
           npx eas build --platform android --profile production-apk --local --non-interactive --output build/aether-universal.apk
 
       - name: 📝 Generate Release Notes & Tutorial
