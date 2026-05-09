@@ -39,37 +39,46 @@ function BlockCell({ x, y, board, possibleBoardDropSpots }: { x: number, y: numb
 
     const [hasGem, setHasGem] = useState(board.value[y][x].hasGem);
 
-    useAnimatedReaction(() => {
-        return board.value[y][x];
-    }, (cur, prev) => {
+    // Prevent the split-second “color flash” caused by preview/hover state mutating right before commit.
+    // We only latch the color/hoverColor when a block is actually committed (FILLED), not while it’s hovering.
+    useAnimatedReaction(() => board.value[y][x], (cur, prev) => {
         if (cur.hasGem !== prev?.hasGem) {
             runOnJS(setHasGem)(cur.hasGem);
         }
 
-        if (cur.blockType !== BoardBlockType.EMPTY) {
+        // Latch committed color only.
+        if (cur.blockType === BoardBlockType.FILLED) {
             lastColor.value = cur.color;
             lastHoverColor.value = cur.hoveredBreakColor;
         }
-        
-        if (cur.blockType == BoardBlockType.EMPTY && prev && (prev.blockType == BoardBlockType.FILLED || prev.blockType == BoardBlockType.HOVERED_BREAK_EMPTY || prev.blockType == BoardBlockType.HOVERED_BREAK_FILLED)) {
+
+        // If we just cleared a committed block, animate it out using the latched color.
+        if (
+            cur.blockType === BoardBlockType.EMPTY &&
+            prev &&
+            (prev.blockType === BoardBlockType.FILLED || prev.blockType === BoardBlockType.HOVERED_BREAK_EMPTY || prev.blockType === BoardBlockType.HOVERED_BREAK_FILLED)
+        ) {
             const angle = Math.random() * Math.PI * 2;
             const distance = 250;
             const rotation = (Math.random() - 0.5) * Math.PI * 4;
-            
+
             placedBlockDirectionX.value = Math.cos(angle) * distance;
             placedBlockDirectionY.value = Math.sin(angle) * distance;
             placedBlockRotation.value = rotation;
-            
-            placedBlockFall.value = withTiming(1, { 
-                duration: 600 
-            }, (finished) => {
-                'worklet';
-                if (finished) {
-                    placedBlockFall.value = 0;
+
+            placedBlockFall.value = withTiming(
+                1,
+                { duration: 600 },
+                (finished) => {
+                    'worklet';
+                    if (finished) {
+                        placedBlockFall.value = 0;
+                    }
                 }
-            });
+            );
         }
     });
+
 
     const animatedStyle = useAnimatedStyle(() => {
         const block = board.value[y][x];

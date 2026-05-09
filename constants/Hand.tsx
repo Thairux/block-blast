@@ -50,29 +50,48 @@ function getValidPlacements(board: Board, piece: PieceData): {x: number, y: numb
     return placements;
 }
 
-function isOrderPlayable(board: Board, pieces: PieceData[]): boolean {
+function simulateGreedyMove(board: Board, pieces: PieceData[], depth: number): boolean {
     "worklet";
-    if (pieces.length === 0) return true;
-    
+    if (pieces.length === 0 || depth <= 0) return true;
+
     const placements = getValidPlacements(board, pieces[0]);
     if (placements.length === 0) return false;
 
-    // Pick a path that tries to keep the board clean.
-    const bestPlacement = placements[0]; 
-    
+    // Pick a path deterministically (first valid). This is a safety check, not optimal play.
+    const bestPlacement = placements[0];
+
     const nextBoard = deepCopyBoard(board);
     placePieceOntoBoard(nextBoard, pieces[0], bestPlacement.x, bestPlacement.y, BoardBlockType.FILLED);
     breakLines(nextBoard);
-    
-    return isOrderPlayable(nextBoard, pieces.slice(1));
+
+    return simulateGreedyMove(nextBoard, pieces.slice(1), depth - 1);
+}
+
+function getPlayablePieceIndex(board: Board, piece: PieceData): number {
+    "worklet";
+    const placements = getValidPlacements(board, piece);
+    return placements.length > 0 ? 1 : 0;
 }
 
 /**
- * Checks if a hand is "Stupid-Proof":
- * 1. Must be playable in ALL 6 permutations.
+ * Infinite-mode safety check.
+ * We no longer require ALL 6 permutations to be playable.
+ * Instead, we require that at least one greedy ordering can continue for a short lookahead.
  */
-function isHandIndestructible(board: Board, hand: PieceData[]): boolean {
+function isHandTriviallySafe(board: Board, hand: PieceData[], lookaheadPlies: number): boolean {
     "worklet";
+
+    // Immediate: at least one of the 3 pieces must fit somewhere.
+    let anyFits = false;
+    for (let i = 0; i < hand.length; i++) {
+        if (getPlayablePieceIndex(board, hand[i]) === 1) {
+            anyFits = true;
+            break;
+        }
+    }
+    if (!anyFits) return false;
+
+    // Short lookahead: try a few candidate orderings (the current hand order is already shuffled).
     const perms = [
         [hand[0], hand[1], hand[2]],
         [hand[0], hand[2], hand[1]],
@@ -83,10 +102,12 @@ function isHandIndestructible(board: Board, hand: PieceData[]): boolean {
     ];
 
     for (const p of perms) {
-        if (!isOrderPlayable(board, p)) return false;
+        if (simulateGreedyMove(deepCopyBoard(board), p, lookaheadPlies)) return true;
     }
-    return true;
+
+    return false;
 }
+
 
 /**
  * Heuristic to check if pieces are "appropriate" for the board density.
@@ -140,10 +161,11 @@ export function createHandWorklet(size: number, mode: GameModeType, board?: Boar
                 }
             }
 
-            if (isHandIndestructible(board, candidateHand)) {
+            if (isHandTriviallySafe(board, candidateHand, 2)) {
                 for (let i = 0; i < size; i++) hand[i] = candidateHand[i];
                 return hand;
             }
+
             attempts++;
         }
         
